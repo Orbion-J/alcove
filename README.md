@@ -1,1 +1,1 @@
-# alcove
+# AlCoVe - Altered Coq Verification
