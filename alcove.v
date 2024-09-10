@@ -1,313 +1,364 @@
-Module Player.
-
-	Variant Player :=
-	| Alice : Player
-	| Bob : Player 
-	.
-
-	Definition nextPlayer (p :Player) : Player :=
-	match p with
-	| Alice => Bob
-	| Bob => Alice
-	end.
-
-	Definition each (T:Type) := Player -> T.
-
-	Definition foreach P := P Alice /\ P Bob.
-
-End Player.
-
-Module Biome.
-
-	Variant Biome :=
-	| Forest 
-	| Mountain
-	| Ocean 
-	.
-
-End Biome.
-
-
+Require Import List.
 Require Import String.
 
-Module Card.
+Module _2_OBJECTS.
 
-	Variant Rarity :=
-	| Common : Rarity
-	| Rare : Rarity
-	| Unique : Rarity
+	Axiom OBJECT : Type.
+
+	(*****************************)
+	(*   2.2 - CHARACTERISTICS   *)
+	(*****************************)
+
+	Axiom has : OBJECT -> forall Characteristic:Type, Characteristic -> Prop.
+
+	Fixpoint has_at_least (x:OBJECT) (Characteristic:Type) (cs:list Characteristic) :=
+		match cs with
+			  nil => True 
+			| cons c cs => has x Characteristic c /\ has_at_least x Characteristic cs 
+		end.
+	Definition has_among (x:OBJECT) (Characteristic:Type) (cs:list Characteristic) :=
+		forall c:Characteristic, has x Characteristic c -> In c cs.
+	Definition has_exactly (x:OBJECT) (Characteristic:Type) (cs:list Characteristic) :=
+		has_at_least x Characteristic cs  /\ has_among x Characteristic cs.
+
+	Axiom is_TOKEN : OBJECT -> Prop.
+
+	(*------------------*)
+	(*   2.2.1 - TYPE   *)
+	(*------------------*)
+
+	(* 2.2.1.a *)
+	Variant TYPE :=
+		| Character
+		| Emblem
+		| Hero
+		| Permanent 
+		| Region
+		| Spell
 	.
 
-	Variant Faction :=
-	| Axxiom : Faction (* the second x avoids confusion with the word Axiom in Coq*)
-	| Bravos : Faction
-	| Lyra : Faction
-	| Muna : Faction
-	| Ordis : Faction
-	| Yzmir : Faction
-	.
+	(* 2.2.1.b *)
+	Axiom _2_2_1_b : forall x : OBJECT, exists! t : TYPE, has x TYPE t.
 
-	Variant CardType :=
-	| Character
-	| Spell
-	| Permanent
-	| Hero
-	.
+	(* 2.2.1.c - physical description *)
 
-	Variant CardSubtype :=
-	| XX : CardSubtype
-	.
+	(* 2.2.1.d-g - ? *)
 
-	Definition Statistics := Biome.Biome -> nat.
+	(* 2.2.1.h - ? *)
 
+	(* 2.2.1.i - ? *)
+
+
+	(*----------------------*)
+	(*   2.2.2 - SUBTYPES   *)
+	(*----------------------*)
+
+	Axiom SUBTYPE : Type.
+
+	(* 2.2.2.a - ntd *)
+
+	(* 2.2.2.b *)
+	Axiom _2_2_2_b : forall x:OBJECT, forall s:SUBTYPE, 
+		has x TYPE Hero -> not (has x SUBTYPE s).
 	
-	Variant Ability := (* TODO *)
-	| ActivatedAbility
-	| PassiveAbility
-	| TriggeredAbility
+	(* 2.2.2.c - ntd *)
+
+	(* 2.2.2.d *)
+	Variant CHARACTER_SUBTYPE :=
+		| Adventurer | Animal | Apprentice | Artist
+		| Bureaucrat
+		| Citizen | Companion
+		| Deity | Dragon | Druid
+		| Elemental | Engineer
+		| Fairy
+		| Leviathan 
+		| Mage | Messenger 
+		| Noble 
+		| Plant 
+		| Robot 
+		| Soldier | Scholar | Spirit
+		| Titan | Trainee
+	.
+	Axiom character_subtype_is_subtype : CHARACTER_SUBTYPE -> SUBTYPE.
+	Coercion character_subtype_is_subtype : CHARACTER_SUBTYPE >-> SUBTYPE.
+
+	Axiom _2_2_2_d : forall x, forall s:CHARACTER_SUBTYPE, 
+		has x SUBTYPE s -> has x TYPE Character.
+
+	(* 2.2.2.e *)
+	Variant PERMANENT_SUBTYPE :=
+		  Landmark
+	.
+	Axiom permament_subtype_is_subtype : PERMANENT_SUBTYPE -> SUBTYPE.
+	Coercion permament_subtype_is_subtype : PERMANENT_SUBTYPE >-> SUBTYPE.
+
+	Axiom _2_2_2_e : forall x, forall s:PERMANENT_SUBTYPE,
+		has x SUBTYPE s -> has x TYPE Permanent.
+
+	(* 2.2.2.f *)
+	Variant REGION_SUBTYPE :=
+		| Forest 
+		| Mountain
+		| Water
+	.
+	Axiom region_subtype_is_subtype : REGION_SUBTYPE -> SUBTYPE.
+	Coercion region_subtype_is_subtype : REGION_SUBTYPE >-> SUBTYPE.
+
+	Axiom _2_2_2_f : forall x, forall s:REGION_SUBTYPE,
+		has x SUBTYPE s -> has x TYPE Region.
+
+	(* 2.2.2.g *)
+	Variant SPELL_SUBTYPE :=
+		| Boon
+		| Conjuration
+		| Disruption
+		| Maneuver
+		| Song
+	.
+	Axiom spell_subtype_is_subtype : SPELL_SUBTYPE -> SUBTYPE.
+	Coercion spell_subtype_is_subtype : SPELL_SUBTYPE >-> SUBTYPE.
+
+	Axiom _2_2_2_g : forall x, forall s:SPELL_SUBTYPE,
+		has x SUBTYPE s -> has x TYPE Spell.
+
+	(* 2.2.2.h *)
+	Variant EMBLEM_SUBTYPE :=
+		| Reaction
+		| Ongoing
+	.
+	Axiom emblem_subtype_is_subtype : EMBLEM_SUBTYPE -> SUBTYPE.
+	Coercion emblem_subtype_is_subtype : EMBLEM_SUBTYPE >-> SUBTYPE.
+
+	Axiom _2_2_2_h : forall x, forall s:EMBLEM_SUBTYPE,
+		has x SUBTYPE s -> has x TYPE Emblem.
+
+	(* 2.2.2.i - physical description *)
+
+	(* 2.2.2.j - ntd ? *)
+
+	(* 2.2.2.k *)
+	Axiom HeroRegion : OBJECT.
+	Axiom CompanionRegion : OBJECT.
+	Axiom Arena : OBJECT.
+	Axiom _2_2_2_k_HeroRegion : has_exactly HeroRegion SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
+	Axiom _2_2_2_k_CompanionRegion : has_exactly CompanionRegion SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
+	Axiom _2_2_2_k_Arena : has_exactly Arena SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
+
+	Lemma _2_2_2_k_HeroRegion_is_Region : has HeroRegion TYPE Region.
+	Proof. destruct _2_2_2_k_HeroRegion as [[? _] _]. eapply _2_2_2_f. eauto. Qed. 
+	Lemma _2_2_2_k_CompanionRegion_is_Region : has CompanionRegion TYPE Region.
+	Proof. destruct _2_2_2_k_CompanionRegion as [[? _] _]. eapply _2_2_2_f. eauto. Qed. 
+	Lemma _2_2_2_k_Arena_is_Region : has Arena TYPE Region.
+	Proof. destruct _2_2_2_k_Arena as [[? _] _]. eapply _2_2_2_f. eauto. Qed. 
+
+	(* 2.2.2.l - ? *)
+
+	(* 2.2.2.m - ? *)
+
+	(* 2.2.2.n-o - ? *)
+
+	(* 2.2.2.p - ? *)
+
+
+	(*------------------*)
+	(*   2.2.3 - NAME   *)
+	(*------------------*)
+
+	(* 2.2.3.a *)
+	Definition NAME := string.
+
+	(* 2.2.3.b *)
+	Axiom _2_2_3_b : forall x:OBJECT, exists n m:NAME,
+		has x NAME n -> has x NAME m -> n = m.
+
+	(* 2.2.3.c-e - physical description *)
+
+	(* 2.2.3.f - ? *)
+
+	(* 2.2.3.g *)
+	Axiom _2_2_3_g : forall x:OBJECT, has x TYPE Emblem -> forall n:NAME, not (has x NAME n).
+
+
+	(*--------------------*)
+	(*   2.2.4 - RARITY   *)
+	(*--------------------*)
+
+	(* 2.2.4.a *)
+	Variant RARITY :=
+		| Common
+		| Rare
+		| Unique
 	.
 
-	Record Card :=
-	{
-		name : string ;
-		faction : Faction ;
-		rarity : Rarity ;
-		type : CardType ;
-		subtype : CardSubtype ;
-		handCost : nat ;
-		reserveCost : nat ;
-		statistics : option Statistics ;
-		abilities : list Ability
-	}.
+	(* 2.2.4.b - physical description *)
 
-	Definition Counter := prod string nat .
-
-	Variant Properties :=
-	| Asleep
-	| Anchored
-	| Fleeting
-	. 
-	
-	Record OnBordCard :=
-	{
-		card : Card ;
-
-		exhausted : bool ;
-
-		boosts : nat ;
-		counters : list Counter ;
-
-		properties : Properties -> bool ;
-
-		faceUp : bool ;
-	}.
-
-	Definition HeroCard := exists c : OnBordCard, c.(card).(type) = Hero.
-
-End Card.
+	(* 2.2.4.c *)
+	Axiom _2_2_4_c : forall x:OBJECT, 
+		(has x TYPE Hero \/ has x TYPE Region \/ has x TYPE Emblem \/ is_TOKEN x) -> 
+		forall r:RARITY, not (has x RARITY r).
 
 
-Module Tumult.
+	(*---------------------*)
+	(*   2.2.5 - VERSION   *)
+	(*---------------------*)
 
-	Import Biome.
+	(* TODO *)
 
-	Definition Region := Biome -> bool.
-	
-	Definition regionFMO : Region := fun (b:Biome) => true.
-	Definition regionF : Region := fun b => match b with Forest => true | _ => false end.
-	Definition regionM : Region := fun b => match b with Mountain => true | _ => false end.
-	Definition regionO : Region := fun b => match b with Ocean => true | _ => false end.
-	Definition regionFM : Region := fun b => match b with Ocean => false | _ => true end.
-	Definition regionMO : Region := fun b => match b with Forest => false | _ => true end.
-	Definition regionFO : Region := fun b => match b with Mountain => false | _ => true end.
 
-	Definition UnorientedTumultCard := Biome. (* the lonely biome of the card *)
-	Record TumultCard := {
-		card : UnorientedTumultCard ;
-		orientation : bool ; (* true : the lonely biome is left *)
-		revealed : bool ;
-	}.
-	
-	Variant allBiomes : Biome -> Biome -> Biome -> Prop :=
-	| allBiomes_FMO : allBiomes Forest Mountain Ocean
-	| allBiomes_FOM : allBiomes Forest Ocean Mountain
-	| allBiomes_MFO : allBiomes Mountain Forest Ocean
-	| allBiomes_MOF : allBiomes Mountain Ocean Forest
-	| allBiomes_OFM : allBiomes Ocean Forest Mountain
-	| allBiomes_OMF : allBiomes Ocean Mountain Forest
-	. 
+	(*-----------------------*)
+	(*   2.2.6 - HAND COST   *)
+	(*-----------------------*)
 
-	Variant TumultLane := 
-	| TumultLane_cons : forall t1 t2 t3 : TumultCard,
-		allBiomes t1.(card) t2.(card) t3.(card) -> TumultLane
+	(* 2.2.6.a *)
+	Variant HAND_COST := hand_cost : nat -> HAND_COST.
+
+	(* 2.2.6.b - physical description *)
+
+	(* 2.2.6.c *)
+	Axiom _2_2_6_c : forall x:OBJECT, is_TOKEN x -> has x HAND_COST (hand_cost 0).
+
+	(* 2.2.6.d *)
+	Axiom _2_2_6_d : forall x:OBJECT, has x TYPE Emblem -> forall h:HAND_COST,
+		not (has x HAND_COST h).
+
+
+	(*--------------------------*)
+	(*   2.2.7 - RESERVE COST   *)
+	(*--------------------------*)
+
+	(* 2.2.7.a *)
+	Variant RESERVE_COST := reserve_cost : nat -> RESERVE_COST.
+
+	(* 2.2.7.b - physical description *)
+
+	(* 2.2.7.c *)
+	Axiom _2_2_7_c : forall x:OBJECT, is_TOKEN x -> has x RESERVE_COST (reserve_cost 0).
+
+	(* 2.2.7.d *)
+	Axiom _2_2_7_d : forall x:OBJECT, has x TYPE Emblem -> forall r:RESERVE_COST,
+		not (has x RESERVE_COST r).
+
+
+	(*---------------------*)
+	(*   2.2.8 - FACTION   *)
+	(*---------------------*)
+
+	(* 2.2.8.a *)
+	Variant FACTION :=
+		| Axxiom (* the second x avoids confusion with the word Axiom in Coq *)
+		| Bravos
+		| Lyra
+		| Muna
+		| Ordis
+		| Yzmir
 	.
 
-End Tumult.		
+	(* 2.2.8.b *)
+	Definition neutral (x:OBJECT) := forall f:FACTION, not (has x FACTION f).
+
+	(* 2.2.8.c - physical description *)
+
+	(* 2.2.8.d *)
+	Axiom _2_2_8_d : forall x:OBJECT, 
+		(is_TOKEN x \/ has x TYPE Emblem) -> neutral x.
 
 
-Module Days.
+	(*------------------------*)
+	(*   2.2.9 - STATISTICS   *)
+	(*------------------------*)
+
+	(* 2.2.9.a-b *)
+	Variant STATISTICS := statistics : (REGION_SUBTYPE -> nat) -> STATISTICS. 
+
+	(* 2.2.9.c *)
+	Axiom _2_2_9_c : forall x:OBJECT, forall s: STATISTICS,
+		has x STATISTICS s -> has x TYPE Character.
+
+	(* 2.2.9.d - physical description *)
+
+	(* 2.2.9.e - ? *)
 
 
-	Variant MorningStep :=
-	| Setup
-	| FirstPlayerDraw
-	| SecondPlayerDraw
+	(*------------------------*)
+	(*   2.2.10 - ABILITIES   *)
+	(*------------------------*)
+
+	(* 2.2.10.a *)
+	Variant ABILITIES := 
+		| QuickAction
+		| ReactionAbility (* not name Reaction to avoid confusion with the subtype *)
+		| PassiveAbility
+		| Effect
 	.
 
-	Definition compareMorningSteps (s1 s2 : MorningStep) :=
-	match s1, s2 with
-	| Setup, Setup => Eq 
-	| Setup, _ => Lt 
-	| FirstPlayerDraw, Setup => Gt 
-	| FirstPlayerDraw, FirstPlayerDraw => Eq 
-	| FirstPlayerDraw, SecondPlayerDraw => Lt 
-	| SecondPlayerDraw, SecondPlayerDraw => Eq 
-	| SecondPlayerDraw, _ => Gt 
-	end.
+	(* 2.2.10.b-c - physical description *)
 
-	Variant NightStep :=
-	| Rest 
-	| Cleanup
+	(* 2.2.10.d - ? *)
+
+	(* 2.2.10.e - ? *)
+
+	(* 2.2.10.f-g - ? *)
+
+	(* 2.2.10.h-k - ? *)
+
+
+	(*----------------------------*)
+	(*   2.2.11 - RESERVE LIMIT   *)
+	(*----------------------------*)
+
+	(* 2.2.11.a *)
+	Variant RESERVE_LIMIT := reserve_limit : nat -> RESERVE_LIMIT.
+
+	(* 2.2.11.b *)
+	Axiom _2_2_11_b : forall x:OBJECT, forall r:RESERVE_LIMIT,
+		has x RESERVE_LIMIT r -> has x TYPE Hero.
+
+	(* 2.2.11.c - physical description *)
+
+
+	(*-----------------------------*)
+	(*   2.2.12 - LANDMARK LIMIT   *)
+	(*-----------------------------*)
+
+	(* 2.2.12.a *)
+	Variant LANDMARK_LIMIT := landmark_limit : nat -> LANDMARK_LIMIT.
+
+	(* 2.2.12.b *)
+	Axiom _2_2_12_b : forall x:OBJECT, forall l:LANDMARK_LIMIT,
+		has x LANDMARK_LIMIT l -> has x TYPE Hero.
+
+	(* 2.2.12.c - physical description *)
+
+
+	(*-----------------------*)
+	(*   2.2.13 - DURATION   *)
+	(*-----------------------*)
+
+	(* 2.2.13.a *)
+	Variant DURATION :=
+		| ThisTurn
+		| ThisAfternoon
+		| ThisDay
 	.
 
-	Definition compareNightSteps (s1 s2 : NightStep) :=
-	match s1, s2 with 
-	| Rest, Rest => Eq
-	| Rest, _ => Lt 
-	| Cleanup, Cleanup => Eq 
-	| Cleanup, _ => Gt 
-	end.
+	(* 2.2.13.b *)
+	Axiom _2_2_13_b : forall x:OBJECT, forall d:DURATION,
+		has x DURATION d -> has x SUBTYPE Ongoing.
+	Lemma _2_2_13_b' : forall x:OBJECT, forall d:DURATION,
+		has x DURATION d -> has x TYPE Emblem.
+	Proof. intros. eapply _2_2_2_h. eapply _2_2_13_b. eauto. Qed.
+
+	(* 2.2.13.c - ? *)
 
 
-	Record PassingPlayers := {
-		first : bool ;
-		second : bool ;
-	}.
+	(*------------------------*)
+	(*   2.2.14 - TIMESTAMP   *)
+	(*------------------------*)
 
-	Record Turn := {
-		player : Player.Player ;
-		turnNumber : nat ;
-	}.
+	(* 2.2.14.a *)
+	Variant TIMESTAMP := timestamp : nat -> TIMESTAMP.
 
-	Definition compareTurns (t1 t2 : Turn) := Nat.compare t1.(turnNumber) t2.(turnNumber).
-
-	Variant Phase :=
-	| Morning : MorningStep -> Phase
-	| Noon
-	| Afternoon : Turn -> PassingPlayers -> Phase
-	| Dusk
-	| Night : NightStep -> Phase
-	.
-
-	Definition comparePhases (p1 p2 : Phase) :=
-	match p1, p2 with 
-	| Morning s1, Morning s2 => compareMorningSteps s1 s2
-	| Morning _, _ => Lt 
-	| Noon, Morning _ => Gt
-	| Noon, Noon => Eq 
-	| Noon, _ => Lt
-	| Afternoon _ _ , Morning _ => Gt
-	| Afternoon _ _ , Noon => Gt
-	| Afternoon t1 _ , Afternoon t2 _ => compareTurns t1 t2
-	| Afternoon _ _ , _ => Lt
-	| Dusk, Dusk => Eq 
-	| Dusk, Night _ => Lt 
-	| Dusk, _ => Gt 
-	| Night s1, Night s2 => compareNightSteps s1 s2
-	| Night _, _ => Gt 
-	end.
-
-	Record Day := {
-		firstPlayer : Player.Player ;
-		dayNumber : nat ;
-		phase : Phase ;
-	}.
-	
-	Definition compareDays (d1 d2 : Day) :=
-	match Nat.compare d1.(dayNumber) d2.(dayNumber) with
-	| Lt => Lt 
-	| Gt => Gt 
-	| Eq => comparePhases d1.(phase) d2.(phase)
-	end.
+	(* 2.2.14.c-d - ? *)
 
 
-	Notation "D << D'" := (compareDays D D') (at level 50).
-
-
-
-	Lemma compareNightSteps_antisym : forall S S', compareNightSteps S S' = CompOpp (compareNightSteps S' S).
-	Proof. intros. destruct S; destruct S'; auto. Qed.
-	Lemma compareMorningSteps_antisym : forall S S', compareMorningSteps S S' = CompOpp (compareMorningSteps S' S).
-	Proof. intros. destruct S; destruct S'; auto. Qed.
-	Lemma comparePhases_antisym : forall P P', comparePhases P P' = CompOpp( comparePhases P' P ).
-	Proof.
-		intros. destruct P ; destruct P'; auto; unfold compareDays; simpl.
-		- apply compareMorningSteps_antisym.	
-		- unfold compareTurns. apply PeanoNat.Nat.compare_antisym.
-		- apply compareNightSteps_antisym.
-	Qed.
-	Lemma compareDays_antisym : forall D D', D << D' = CompOpp (D' << D).
-	Proof.
-		intros. destruct D. destruct D'. 
-		destruct (Compare_dec.lt_eq_lt_dec dayNumber0 dayNumber1) as [[]|];
-		unfold compareDays; simpl. 
-		- assert (Nat.compare dayNumber0 dayNumber1 = Lt) by (apply PeanoNat.Nat.compare_lt_iff; auto).
-		  assert (Nat.compare dayNumber1 dayNumber0 = Gt) by (apply PeanoNat.Nat.compare_gt_iff; auto). 
-		  rewrite H, H0; auto.
-		- assert (Nat.compare dayNumber0 dayNumber1 = Eq) by (apply PeanoNat.Nat.compare_eq_iff; auto).
-		  assert (Nat.compare dayNumber1 dayNumber0 = Eq) by (apply PeanoNat.Nat.compare_eq_iff; auto). 
-		  rewrite H, H0; auto.
-		  apply comparePhases_antisym.
-		- assert (Nat.compare dayNumber1 dayNumber0 = Lt) by (apply PeanoNat.Nat.compare_lt_iff; auto).
-		  assert (Nat.compare dayNumber0 dayNumber1 = Gt) by (apply PeanoNat.Nat.compare_gt_iff; auto). 
-		  rewrite H, H0; auto.
-	Qed.
-
-
-End Days.
-
-Module GameState.
-
-	Definition Expedition := list Card.OnBordCard .
-
-	Record GameState :=
-	{
-		day : Days.Day ;
-
-		hands :  (list Card.Card) ;
-
-		decks : Player.each (list Card.Card) ;
-
-		heroes : Player.each Card.HeroCard ;
-
-		tumult : Tumult.TumultLane ;
-		tieBreaker : bool ;
-		heroToken : Player.each nat ; (* number of steps from the start *)
-		companionToken : Player.each nat ; (* idem *)
-
-		heroExpeditions : Player.each Expedition ;
-		companionExpeditions : Player.each Expedition ;
-
-		reserves : Player.each (list Card.OnBordCard) ;
-		landmarks : Player.each (list Card.OnBordCard) ;
-
-		mana : Player.each (list Card.OnBordCard) ;
-
-	}.
-
-	Definition _win (p:Player.Player) (G:GameState) :=
-		(tieBreaker G = false) /\ (heroToken G p + companionToken G p >= 7).
-
-	Import Card.
-
-	Fixpoint foreach {T:Type} (P:T -> Prop) (xs:list T) := 
-	match xs with 
-	| nil => True
-	| cons x xs => (P x) /\ foreach P xs
-	end.
-
-	Definition manaValidOneCard (c:OnBordCard) := c.(faceUp) = false.
-	Definition manaValidOnePlayer G p:= foreach manaValidOneCard (mana G p).
-	Definition manaValid G : Player.foreach (manaValidOnePlayer G).
-
-	
+End _2_OBJECTS.
