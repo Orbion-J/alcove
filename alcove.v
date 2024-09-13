@@ -1,12 +1,25 @@
 Require Import List.
 Require Import String.
 
-Module _2_OBJECTS.
+Section __CARDS.
+
+	Axiom CARD : Type.
+
+End __CARDS.
+
+Section __PLAYERS.
+
+	Axiom PLAYER : Type.
+	(* Variant PLAYER := PlayerA | PlayerB . *)
+
+End __PLAYERS.
+
+Section _2_OBJECTS.
 
 	Axiom OBJECT : Type.
 
 	(*****************************)
-	(*   2.2 - CHARACTERISTICS   *)
+	(*** 2.2 - CHARACTERISTICS ***)
 	(*****************************)
 
 	Axiom has : OBJECT -> forall Characteristic:Type, Characteristic -> Prop.
@@ -361,4 +374,159 @@ Module _2_OBJECTS.
 	(* 2.2.14.c-d - ? *)
 
 
+
+	(****************************************)
+	(*** 2.3 - APPLYING PASSIVE ABILITIES ***)
+	(****************************************)
+
+	(* TODO *)
+
+
+
+	(**********************)
+	(*** 2.4 - STATUSES ***)
+	(**********************)
+
+	(* TODO *)
+
+
+
+	(**********************)
+	(*** 2.5 - COUNTERS ***)
+	(**********************)
+
+	(* 2.5.a-c *)
+	Variant COUNTERS := counters : string -> nat -> COUNTERS.
+
+	(* 2.5.d - ? *)
+
+	(* 2.5.e-g - ? *)
+
+	(* 2.5.h - ntd *)
+
+	(* 2.5.i-j - ? *)
+
+	(*----------------------------*)
+	(*   2.5.1 - BOOST COUNTERS   *)
+	(*----------------------------*)
+
+	(* 2.5.1.a *)
+	Definition Boost := counters "boost".
+
+	(* 2.5.1.b - ? *)
+
 End _2_OBJECTS.
+
+Section _3_ZONES.
+
+	(*****************************)
+	(*** 3.1 - ZONE PROPERTIES ***)
+	(*****************************)
+
+	(*---------------------*)
+	(*   3.1.1 - GENERAL   *)
+	(*---------------------*)
+
+	(* 3.1.1.a *)
+	Axiom ZONE : Type.
+	Axiom card_is_in : ZONE -> CARD -> Prop.
+	Axiom object_is_in : ZONE -> OBJECT -> Prop.
+
+	Axiom BOARD : Type. (* the set of all zones in the game *)
+	Axiom is_on_board : BOARD -> ZONE -> Prop.
+
+	(* 3.1.1.b - ? *)
+
+	(* 3.1.1.c *)
+	Variant ZONE_KIND :=
+		| Adventure
+		| Deck 
+		| DicardPile
+		| ExpeditionZone 
+		| Hand 
+		| HeroZone 
+		| LandmarkZone
+		| Limbo
+		| ManaZone 
+		| Reserve 
+	.
+	
+	Axiom has_kind : ZONE -> ZONE_KIND -> Prop.
+	Axiom _3_1_1_c : forall z:ZONE, exists! k:ZONE_KIND, has_kind z k.
+
+
+	(*-------------------------------*)
+	(*   3.1.2 - SHARED OR PRIVATE   *)
+	(*-------------------------------*)
+	
+	Axiom owner : ZONE -> PLAYER -> Prop.
+
+	(* 3.1.2.a *)
+	Definition shared (k:ZONE_KIND) := match k with 
+		| Adventure
+		| ExpeditionZone
+		| Limbo
+		| _ => False 
+	end.
+
+	Axiom _3_1_2_a : forall b:BOARD, forall k:ZONE_KIND, shared k ->
+		exists! z:ZONE, has_kind z k /\ is_on_board b z.
+	
+	Axiom _3_1_2_a' : forall k:ZONE_KIND, shared k -> forall z:ZONE, has_kind z k ->
+		forall p:PLAYER, not (owner z p).
+
+	(* 3.1.2.b *)
+	Definition private (k:ZONE_KIND) := not (shared k).
+
+	Axiom _3_1_2_b : forall b:BOARD, forall k:ZONE_KIND, private k ->
+		forall p:PLAYER, exists! z:ZONE, owner z p /\ has_kind z k /\ is_on_board b z.
+
+	Axiom _3_1_2_b' : forall b:BOARD, forall k:ZONE_KIND, private k -> forall z:ZONE, has_kind z k ->
+		exists! p:PLAYER, owner z p. 
+		(* is this provable ? *)
+
+	(* 3.1.2.c - ? *)
+
+
+	(*-------------------------------*)
+	(*   3.1.3 - VISIBLE OR HIDDEN   *)
+	(*-------------------------------*)
+
+	(* 3.1.3.a *)
+	Definition visible (k:ZONE_KIND) := match k with
+		| Adventure
+		| DicardPile
+		| ExpeditionZone
+		| HeroZone
+		| LandmarkZone
+		| Limbo
+		| Reserve => True
+		| _ => False
+	end.
+
+	Axiom _3_1_3_a : forall k:ZONE_KIND, visible k -> forall z:ZONE, has_kind z k ->
+		forall c:CARD, not (card_is_in z c).
+
+	(* 3.1.3.b - ? *)
+
+	(* 3.1.3.c - ? *)
+
+	(* 3.1.3.d *)
+	Definition hidden (k:ZONE_KIND) := not (visible k).
+
+	Axiom _3_1_3_d : forall k:ZONE_KIND, hidden k -> forall z:ZONE, has_kind z k ->
+		forall o:OBJECT, not (object_is_in z o).
+
+	Lemma _3_1_3' : forall z:ZONE, 
+		not (exists c:CARD, exists o:OBJECT, card_is_in z c /\ object_is_in z o).
+	Proof.
+		intros. intro. destruct H as [? [? []]].
+		destruct _3_1_1_c with z as [k [? _]].
+		induction k.
+		2,5,9:edestruct _3_1_3_d; eauto; unfold hidden; auto.
+		all:edestruct _3_1_3_a; eauto; unfold visible; auto. 
+	Qed.
+	
+
+
+End _3_ZONES.
