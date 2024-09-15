@@ -7,6 +7,7 @@ Require Import String.
 	- [A] => [B]          MEANS that the rule number [A] is implemented at rule number [B]
 	- => [A]              MEANS that the current rule is implemented at rule number [A]
 	- <= [A]              MEANS that the rule number [A] is implemented at that point
+	- [A] =>              MEANS that the rule number [A] is implemented later
 	- ntd                 MEANS "nothing to do" : the rule does not need anything to be implemented
 	- physical descrption MEANS that the rule descirbes the physical game pieces, there is nothing to implement
 
@@ -312,11 +313,11 @@ Section _2_OBJECTS.
 	(*------------------------*)
 
 	(* 2.2.10.a *)
-	Variant ABILITIES := 
-		| QuickAction
-		| ReactionAbility (* not name Reaction to avoid confusion with the subtype *)
+	Variant ABILITIES := (* add "Ability" at the end avoid confusion *)
+		| QuickActionAbility
+		| ReactionAbility
 		| PassiveAbility
-		| Effect
+		| EffectAbility
 	.
 
 	(* 2.2.10.b-c - physical description *)
@@ -684,17 +685,208 @@ Section _3_ZONES.
 
 	
 
-
-
-	Lemma _3_1_3' : forall z:ZONE, 
+	Lemma _3_2_no_cards_and_objects : forall z:ZONE, 
 		not (exists c:CARD, exists o:OBJECT, card_is_in z c /\ object_is_in z o).
 	Proof.
 		intros z H. destruct H as [c [o []]].
-		destruct _3_1_1_c with z as [k [? _]].
+		destruct _3_1_1_c with z as [k [Hk _]].
 		induction k.
-		2,5,9:edestruct _3_1_3_d; eauto; unfold hidden; auto.
-		
-		all:edestruct _3_1_3_a; eauto; unfold visible; auto. 
-	Abort.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_1_a'.
+		- edestruct _3_1_3_d; eauto. unfold hidden.  rewrite Hk. apply _3_2_2_a'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_3_a'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_4_a'.
+		- edestruct _3_1_3_d; eauto. unfold hidden.  rewrite Hk. apply _3_2_5_a'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_6_a'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_7_a'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_8_a'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_9_a'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_10_a'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_4_b_hero'.
+		- edestruct _3_1_3_a; eauto. unfold visible. rewrite Hk. apply _3_2_4_b_comp'.
+	Qed.
 
 End _3_ZONES.
+
+Section _4_GAME_PROGRESSION.
+
+	Axiom ATOMIC_ACTION : Type.
+
+	Axiom STEP : Type.
+	Axiom step_atomic_actions : STEP -> list ATOMIC_ACTION -> Prop.
+	Axiom step_atomic_actions_unique : forall s aas aas', step_atomic_actions s aas -> step_atomic_actions s aas' -> aas = aas'.
+
+	Definition SEQUENCE := list STEP.
+
+	Axiom EFFECT : Type.
+	Axiom effect_sequence : EFFECT -> SEQUENCE -> Prop.
+	Axiom effect_sequence_unique : forall e s s', effect_sequence e s -> effect_sequence e s' -> s = s'.
+
+	Axiom PLAYER_ACTION : Type.
+
+	Variant ACTION :=
+		| Effect : EFFECT -> ACTION
+		| Step : STEP -> ACTION
+		| AtomicAction : ATOMIC_ACTION -> ACTION
+		| PlayerAction : PLAYER_ACTION -> ACTION
+		| CheckReactions
+	.
+	Notation "#{ a }" := (AtomicAction a).
+
+	Axiom new_day : ATOMIC_ACTION.
+
+
+	Axiom GAME_STATE : Type.
+	Definition ACTION_STACK := list ACTION.
+	Variant GAME_PENDING := game_pending : GAME_STATE -> ACTION_STACK -> GAME_PENDING. 
+	Notation "s @ G" := (game_pending G s) (at level 80).
+
+	Axiom perform : GAME_PENDING -> GAME_PENDING -> Prop.
+	Notation "p ~> p'"             := ( perform p p' )                           (at level 90).
+	Notation "G ~( a |  s )~> G'"  := ( (a::s) @ G ~> s @ G' )                   (at level 90).
+	Notation "G ~( a |>> s )~> G'" := ( forall s', (a::s') @ G ~> (s++s') @ G' ) (at level 90).
+	Notation "G ~( a |> a' )~> G'" := ( G ~( a |>> (a' :: nil) )~> G' )          (at level 90).
+	Notation "G ~( a )~> G'"       := ( forall s, G ~( a | s )~> G' )            (at level 90).
+	Notation "~( a |>> s )"         := ( forall G, G ~( a |>> s )~> G )           (at level 90).
+	Notation "~( a |> a' )"         := ( forall G, G ~( a |> a' )~> G )           (at level 90).
+	Notation "~( a | )"             := ( forall G, G ~( a )~> G )                 (at level 90).
+
+
+	Axiom perform_effect : forall e sq,
+		effect_sequence e sq -> ~( Effect e |>> map Step sq ).
+
+	Axiom perform_step : forall s aas,
+		step_atomic_actions s aas -> ~( Step s |>> (map AtomicAction aas) ++ (CheckReactions :: nil) ).
+	
+
+	(***********************************)
+	(*** 4.1 - BEGINNING OF THE GAME ***)
+	(***********************************)
+
+	(* TODO *)
+
+
+
+	(****************************)
+	(*** 4.2 - DAY STRUCTURE  ***)
+	(****************************)
+
+	(* 4.2.a *)
+	Variant PHASE :=
+		| Morning
+		| Noon 
+		| Afternoon 
+		| Dusk
+		| Night
+	.
+
+	Axiom begin_phase : PHASE -> ATOMIC_ACTION.
+	Axiom play_phase  : PHASE -> ATOMIC_ACTION.
+	Axiom end_phase   : PHASE -> ATOMIC_ACTION.
+
+	(* 4.2.b => *)
+
+	(* 4.2.c *)
+	Axiom DAILY_EFFECT : Type.
+	Axiom daily_effect_is_effect : DAILY_EFFECT -> EFFECT.
+	Coercion daily_effect_is_effect : DAILY_EFFECT >-> EFFECT.
+
+	Axiom daily_effects : PHASE -> list DAILY_EFFECT -> Prop.
+	Definition daily_effects_as_actions := map (fun de => Effect (daily_effect_is_effect de)).
+
+	(* 4.2.d - ntd *)
+
+	Axiom _4_2 : forall ph es, daily_effects ph es ->
+		~( #{ begin_phase ph } |>>
+			CheckReactions :: (daily_effects_as_actions es) ++ #{ play_phase ph } :: #{ end_phase ph } :: nil
+		).
+
+
+	(*---------------------*)
+	(*   4.2.1 - MORNING   *)
+	(*---------------------*)
+
+	(* 4.2.1.a => *)
+
+	(* 4.2.1.b *)
+	Axiom Suceed : DAILY_EFFECT.
+	(* ? *)
+
+	(* 4.2.1.c *)
+	Axiom Prepare : DAILY_EFFECT.
+	(* ? *)
+
+	(* 4.2.1.d *)
+	Axiom Draw : DAILY_EFFECT.
+	(* ? *)
+
+	(* 4.2.1.e *)
+	Axiom Expand : DAILY_EFFECT.
+	(* ? *)
+
+	(* <= 4.2.1.a *)
+	Axiom _4_2_1_a : daily_effects Morning (Suceed :: Prepare :: Draw :: Expand :: nil).
+
+	Axiom _4_2_1_play : ~( #{ play_phase Morning } | ).
+	Axiom _4_2_1_end  : ~( #{ end_phase Morning } |> #{ begin_phase Noon }).
+
+
+	(*------------------*)
+	(*   4.2.2 - NOON   *)
+	(*------------------*)
+
+	(* 4.2.2.a *)
+	Axiom _4_2_2_a : daily_effects Noon nil.
+
+	Axiom _4_2_2_play : ~( #{ play_phase Noon } | ).
+	Axiom _4_2_2_end  : ~( #{ end_phase Noon } |> #{ begin_phase Afternoon }).
+
+
+	(*-----------------------*)
+	(*   4.2.3 - AFTERNOON   *)
+	(*-----------------------*)
+
+	Axiom _4_2_3_daily_effects : daily_effects Afternoon nil.
+
+	(* todo *)
+
+	Axiom _4_2_3_end  : ~( #{ end_phase Afternoon } |> #{ begin_phase Dusk }).
+
+	(*------------------*)
+	(*   4.2.4 - DUSK   *)
+	(*------------------*)
+
+	(* 4.2.4.a => *)
+
+	(* 4.2.4.b-e - ?*)
+	Axiom Progress : DAILY_EFFECT.
+	(* ? *)
+
+	Axiom _4_2_4_a : daily_effects Dusk (Progress :: nil).
+
+	
+	Axiom _4_2_4_play : ~( #{ play_phase Dusk } | ).
+	Axiom _4_2_4_end  : ~( #{ end_phase Dusk } |> #{ begin_phase Night }).
+
+	(*-------------------*)
+	(*   4.2.5 - NIGHT   *)
+	(*-------------------*)
+
+	(* 4.2.5.a => *)
+
+	(* 4.2.5.b *)
+	Axiom Rest : DAILY_EFFECT.
+	(* ? *)
+
+	(* 4.2.5.c *)
+	Axiom CleanUp : DAILY_EFFECT.
+	(* ? *)
+	(* 4.2.5.d - ? *)
+
+	(* <= 4.2.5.a *)
+	Axiom _4_2_5_a : daily_effects Night (Rest :: CleanUp :: nil).
+
+	Axiom _4_2_5_play : ~( #{ play_phase Night } | ).
+	Axiom _4_2_5_end  : ~( #{ end_phase Dusk } |> #{ new_day }).
+
+
+End _4_GAME_PROGRESSION.
