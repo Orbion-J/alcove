@@ -1,6 +1,17 @@
 Require Import List.
 Require Import String.
 
+(*
+	** Notations **
+
+	- [A] => [B]          MEANS that the rule number [A] is implemented at rule number [B]
+	- => [A]              MEANS that the current rule is implemented at rule number [A]
+	- <= [A]              MEANS that the rule number [A] is implemented at that point
+	- ntd                 MEANS "nothing to do" : the rule does not need anything to be implemented
+	- physical descrption MEANS that the rule descirbes the physical game pieces, there is nothing to implement
+
+*)
+
 Section __CARDS.
 
 	Axiom CARD : Type.
@@ -45,6 +56,7 @@ Section _2_OBJECTS.
 		| Character
 		| Emblem
 		| Hero
+		| ManaOrb
 		| Permanent 
 		| Region
 		| Spell
@@ -55,20 +67,20 @@ Section _2_OBJECTS.
 
 	(* 2.2.1.c - physical description *)
 
-	(* 2.2.1.d-g - ? *)
+	(* 2.2.1.d-e - ? *)
 
-	(* 2.2.1.h - ? *)
+	(* 2.2.1.f => 3.2.9.c *)
 
-	(* 2.2.1.i - ? *)
+	(* 2.2.1.g-i - ? *)
 
 
 	(*----------------------*)
 	(*   2.2.2 - SUBTYPES   *)
 	(*----------------------*)
 
-	Axiom SUBTYPE : Type.
 
-	(* 2.2.2.a - ntd *)
+	(* 2.2.2.a *)
+	Axiom SUBTYPE : Type.
 
 	(* 2.2.2.b *)
 	Axiom _2_2_2_b : forall x:OBJECT, forall s:SUBTYPE, 
@@ -147,15 +159,18 @@ Section _2_OBJECTS.
 
 	(* 2.2.2.i - physical description *)
 
-	(* 2.2.2.j - ntd ? *)
+	(* 2.2.2.j - token ? *)
 
 	(* 2.2.2.k *)
 	Axiom HeroRegion : OBJECT.
 	Axiom CompanionRegion : OBJECT.
 	Axiom Arena : OBJECT.
-	Axiom _2_2_2_k_HeroRegion : has_exactly HeroRegion SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
-	Axiom _2_2_2_k_CompanionRegion : has_exactly CompanionRegion SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
-	Axiom _2_2_2_k_Arena : has_exactly Arena SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
+	Axiom _2_2_2_k_HeroRegion :
+		has_exactly HeroRegion      SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
+	Axiom _2_2_2_k_CompanionRegion :
+		has_exactly CompanionRegion SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
+	Axiom _2_2_2_k_Arena : 
+		has_exactly Arena           SUBTYPE (map region_subtype_is_subtype (Forest :: Mountain :: Water :: nil )).
 
 	Lemma _2_2_2_k_HeroRegion_is_Region : has HeroRegion TYPE Region.
 	Proof. destruct _2_2_2_k_HeroRegion as [[? _] _]. eapply _2_2_2_f. eauto. Qed. 
@@ -178,7 +193,7 @@ Section _2_OBJECTS.
 	(*------------------*)
 
 	(* 2.2.3.a *)
-	Definition NAME := string.
+	Variant NAME := name : string -> NAME.
 
 	(* 2.2.3.b *)
 	Axiom _2_2_3_b : forall x:OBJECT, exists n m:NAME,
@@ -186,7 +201,7 @@ Section _2_OBJECTS.
 
 	(* 2.2.3.c-e - physical description *)
 
-	(* 2.2.3.f - ? *)
+	(* 2.2.3.f - token ? *)
 
 	(* 2.2.3.g *)
 	Axiom _2_2_3_g : forall x:OBJECT, has x TYPE Emblem -> forall n:NAME, not (has x NAME n).
@@ -289,7 +304,7 @@ Section _2_OBJECTS.
 
 	(* 2.2.9.d - physical description *)
 
-	(* 2.2.9.e - ? *)
+	(* 2.2.9.e - token ? *)
 
 
 	(*------------------------*)
@@ -411,7 +426,7 @@ Section _2_OBJECTS.
 	(*----------------------------*)
 
 	(* 2.5.1.a *)
-	Definition Boost := counters "boost".
+	Definition BoostCounters := counters "boost".
 
 	(* 2.5.1.b - ? *)
 
@@ -432,58 +447,68 @@ Section _3_ZONES.
 	Axiom card_is_in : ZONE -> CARD -> Prop.
 	Axiom object_is_in : ZONE -> OBJECT -> Prop.
 
-	Axiom BOARD : Type. (* the set of all zones in the game *)
-	Axiom is_on_board : BOARD -> ZONE -> Prop.
-
-	(* 3.1.1.b - ? *)
-
 	(* 3.1.1.c *)
 	Variant ZONE_KIND :=
 		| Adventure
 		| Deck 
 		| DicardPile
-		| ExpeditionZone 
+		| ExpeditionZone
 		| Hand 
 		| HeroZone 
 		| LandmarkZone
 		| Limbo
 		| ManaZone 
-		| Reserve 
+		| Reserve
+	(* <= 3.2.4.b *)
+		| HeroExpedition
+		| CompanionExpedition
 	.
 	
-	Axiom has_kind : ZONE -> ZONE_KIND -> Prop.
-	Axiom _3_1_1_c : forall z:ZONE, exists! k:ZONE_KIND, has_kind z k.
+	Axiom kind : ZONE -> ZONE_KIND.
+	Definition has_kind z k := kind z = k.
+	Lemma _3_1_1_c : forall z:ZONE, exists! k:ZONE_KIND, has_kind z k.
+	Proof. intros. exists (kind z). split; intros; unfold has_kind; auto. Qed.
+
+	(* 3.1.1.b *)
+	Axiom _3_1_1_b : forall k:ZONE_KIND, exists z:ZONE, has_kind z k.
 
 
 	(*-------------------------------*)
 	(*   3.1.2 - SHARED OR PRIVATE   *)
 	(*-------------------------------*)
-	
-	Axiom owner : ZONE -> PLAYER -> Prop.
 
 	(* 3.1.2.a *)
-	Definition shared (k:ZONE_KIND) := match k with 
-		| Adventure
-		| ExpeditionZone
-		| Limbo
-		| _ => False 
-	end.
+	Axiom kind_shared : ZONE_KIND -> Prop.
+	Definition shared z := kind_shared (kind z).
 
-	Axiom _3_1_2_a : forall b:BOARD, forall k:ZONE_KIND, shared k ->
-		exists! z:ZONE, has_kind z k /\ is_on_board b z.
+		(* uniqueness of a shared zone *)
+	Axiom _3_1_2_a' : forall z z': ZONE, forall k:ZONE_KIND,
+		has_kind z k -> has_kind z' k -> shared z -> z = z'.
 	
-	Axiom _3_1_2_a' : forall k:ZONE_KIND, shared k -> forall z:ZONE, has_kind z k ->
-		forall p:PLAYER, not (owner z p).
+	Lemma _3_1_2_a : forall k:ZONE_KIND, kind_shared k -> exists! z, has_kind z k.
+	Proof.
+		intros. destruct _3_1_1_b with k as [z]. exists z. split.
+		- auto.
+		- intros. eapply _3_1_2_a'; eauto. unfold has_kind in *. subst. auto.
+	Qed.
 
 	(* 3.1.2.b *)
-	Definition private (k:ZONE_KIND) := not (shared k).
+	Axiom kind_private k : ZONE_KIND -> Prop.
+	Definition private z := kind_private (kind z).
+	
+	Axiom owner : ZONE -> PLAYER -> Prop.
+	Axiom owner_uniqueness : forall z, forall p p', owner z p -> owner z p' -> p = p'.
 
-	Axiom _3_1_2_b : forall b:BOARD, forall k:ZONE_KIND, private k ->
-		forall p:PLAYER, exists! z:ZONE, owner z p /\ has_kind z k /\ is_on_board b z.
+	Axiom _3_1_2_b : forall k:ZONE_KIND, kind_private k -> forall p, exists! z,
+		has_kind z k /\ owner z p.
 
-	Axiom _3_1_2_b' : forall b:BOARD, forall k:ZONE_KIND, private k -> forall z:ZONE, has_kind z k ->
-		exists! p:PLAYER, owner z p. 
-		(* is this provable ? *)
+	Axiom _3_1_2_b_ownership : forall z:ZONE, private z -> exists p:PLAYER, owner z p.
+		(* probably provable with a finite number of players ? *)
+	
+	Lemma _3_1_2_b_ownership' : forall z:ZONE, private z -> exists! p:PLAYER, owner z p.
+	Proof.
+		intros. edestruct _3_1_2_b_ownership; eauto. eexists. split; eauto. intros. eapply owner_uniqueness; eauto.
+	Qed.
 
 	(* 3.1.2.c - ? *)
 
@@ -493,40 +518,183 @@ Section _3_ZONES.
 	(*-------------------------------*)
 
 	(* 3.1.3.a *)
-	Definition visible (k:ZONE_KIND) := match k with
-		| Adventure
-		| DicardPile
-		| ExpeditionZone
-		| HeroZone
-		| LandmarkZone
-		| Limbo
-		| Reserve => True
-		| _ => False
-	end.
+	Axiom kind_visible : ZONE_KIND -> Prop.
+	Definition visible z := kind_visible (kind z).
 
-	Axiom _3_1_3_a : forall k:ZONE_KIND, visible k -> forall z:ZONE, has_kind z k ->
-		forall c:CARD, not (card_is_in z c).
+	Axiom _3_1_3_a : forall z:ZONE, visible z -> forall c:CARD, not (card_is_in z c).
 
 	(* 3.1.3.b - ? *)
 
 	(* 3.1.3.c - ? *)
 
 	(* 3.1.3.d *)
-	Definition hidden (k:ZONE_KIND) := not (visible k).
+	Axiom kind_hidden : ZONE_KIND -> Prop.
+	Definition hidden z := kind_hidden (kind z). 
 
-	Axiom _3_1_3_d : forall k:ZONE_KIND, hidden k -> forall z:ZONE, has_kind z k ->
-		forall o:OBJECT, not (object_is_in z o).
+	Axiom _3_1_3_d : forall z:ZONE, hidden z ->	forall o:OBJECT, not (object_is_in z o).
+	
+
+	(* 3.1.3.e-f - player info ? *)
+
+
+	(*---------------------*)
+	(*   3.1.4 - IN PLAY   *)
+	(*---------------------*)
+
+	(* 3.1.4.a *)
+	Definition in_play (o:OBJECT) := exists z, object_is_in z o /\
+		(has_kind z HeroZone \/ has_kind z ExpeditionZone \/ has_kind z LandmarkZone).
+
+
+
+	(*********************************)
+	(*** 3.2 - ZONE-SPECIFIC RULES ***)
+	(*********************************)
+
+	(*-----------------------*)
+	(*   3.2.1 - ADVENTURE   *)
+	(*-----------------------*)
+
+	(* 3.2.1.a *)
+	Axiom _3_2_1_a  : kind_shared  Adventure.
+	Axiom _3_2_1_a' : kind_visible Adventure.
+
+	(* 3.2.1.b-c - ? *)
+
+
+	(*------------------*)
+	(*   3.2.2 - DECK   *)
+	(*------------------*)
+
+	(* 3.2.2.a *)
+	Axiom _3_2_2_a  : kind_private Deck.
+	Axiom _3_2_2_a' : kind_hidden  Deck.
+
+	(* 3.2.2.b-f - ? *)
+
+
+	(*--------------------------*)
+	(*   3.2.3 - DISCARD PILE   *)
+	(*--------------------------*)
+
+	(* 3.2.3.a *)
+	Axiom _3_2_3_a  : kind_private DicardPile.
+	Axiom _3_2_3_a' : kind_visible DicardPile.
+
+
+	(*-----------------------------*)
+	(*   3.2.4 - EXPEDITION ZONE   *)
+	(*-----------------------------*)
+
+	(* 3.2.4.a *)
+	Axiom _3_2_4_a  : kind_shared  ExpeditionZone.
+	Axiom _3_2_4_a' : kind_visible ExpeditionZone.
+
+	(* 3.2.4.b *)
+	(* => 3.1.1.c *)
+	Axiom subzone : ZONE -> ZONE -> Prop. 
+	Notation "z < z'" := (subzone z z'). 
+
+	Axiom _3_2_4_b_hero  : kind_private HeroExpedition.
+	Axiom _3_2_4_b_hero' : kind_visible HeroExpedition.
+	Axiom _3_2_4_b_hero'' :
+		forall z z', has_kind z HeroExpedition -> has_kind z' ExpeditionZone -> z < z'.
+	Axiom _3_2_4_b_comp  : kind_private CompanionExpedition.
+	Axiom _3_2_4_b_comp' : kind_visible CompanionExpedition.
+	Axiom _3_2_4_b_comp'' :
+		forall z z', has_kind z CompanionExpedition -> has_kind z' ExpeditionZone -> z < z'.
+
+	(* 3.2.4.c *)
+	Lemma _3_2_4_c : forall p, exists z, has_kind z HeroExpedition /\ owner z p.
+	Proof. intros. edestruct _3_1_2_b as [z []]; eauto. apply _3_2_4_b_hero. Qed.
+	Lemma _3_2_4_c' : forall p, exists z, has_kind z CompanionExpedition /\ owner z p.
+	Proof. intros. edestruct _3_1_2_b as [z []]; eauto. apply _3_2_4_b_comp. Qed.
+
+	(* 3.2.4.d-e - ? *)
+
+
+	(*------------------*)
+	(*   3.2.5 - HAND   *)
+	(*------------------*)
+
+	(* 3.2.5.a *)
+	Axiom _3_2_5_a  : kind_private Hand.
+	Axiom _3_2_5_a' : kind_hidden  Hand.
+
+	(* 3.2.5.b-c - ? *)
+
+
+	(*-----------------------*)
+	(*   3.2.6 - HERO ZONE   *)
+	(*-----------------------*)
+	
+	(* 3.2.6.a *)
+	Axiom _3_2_6_a  : kind_private HeroZone.
+	Axiom _3_2_6_a' : kind_visible HeroZone.
+
+	(* 3.2.6.b *)
+	Axiom _3_2_6_b : forall z, has_kind z HeroZone -> forall o o',
+		object_is_in z o -> object_is_in z o' -> has o TYPE Hero -> has o' TYPE Hero -> o = o'.
+
+
+	(*---------------------------*)
+	(*   3.2.7 - LANDMARK ZONE   *)
+	(*---------------------------*)
+	
+	(* 3.2.7.a *)
+	Axiom _3_2_7_a  : kind_private LandmarkZone.
+	Axiom _3_2_7_a' : kind_visible LandmarkZone.
+
+
+	(*-------------------*)
+	(*   3.2.8 - LIMBO   *)
+	(*-------------------*)
+
+	(* 3.2.8.a *)
+	Axiom _3_2_8_a  : kind_shared  Limbo.
+	Axiom _3_2_8_a' : kind_visible Limbo.
+
+
+	(*-----------------------*)
+	(*   3.2.9 - MANA ZONE   *)
+	(*-----------------------*)
+	
+	(* 3.2.9.a *)
+	Axiom _3_2_9_a  : kind_private ManaZone.
+	Axiom _3_2_9_a' : kind_visible ManaZone.
+
+
+	(* 3.2.9.b - ? *)
+
+	(* 3.2.9.c | <= 2.1.1.f *)
+	Axiom _3_2_9_b : forall z, has_kind z ManaZone -> forall o, object_is_in z o -> has o TYPE ManaOrb.
+
+	(* 3.2.9.d - player info ? *)
+
+	(* 3.2.9.e-f - ? *)
+
+
+	(*---------------------------*)
+	(*   3.2.10 - RESERVE ZONE   *)
+	(*---------------------------*)
+	
+	(* 3.2.10.a *)
+	Axiom _3_2_10_a  : kind_private Reserve.
+	Axiom _3_2_10_a' : kind_visible Reserve.
+
+	
+
+
 
 	Lemma _3_1_3' : forall z:ZONE, 
 		not (exists c:CARD, exists o:OBJECT, card_is_in z c /\ object_is_in z o).
 	Proof.
-		intros. intro. destruct H as [? [? []]].
+		intros z H. destruct H as [c [o []]].
 		destruct _3_1_1_c with z as [k [? _]].
 		induction k.
 		2,5,9:edestruct _3_1_3_d; eauto; unfold hidden; auto.
+		
 		all:edestruct _3_1_3_a; eauto; unfold visible; auto. 
-	Qed.
-	
-
+	Abort.
 
 End _3_ZONES.
