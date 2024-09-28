@@ -1,17 +1,39 @@
 Require Import List.
 Require Import String.
+Require Import Lia.
+Require Import Nat.
+(* Require Import Basics. *)
 
 (*
 	** Notations **
 
-	- [A] => [B]          MEANS that the rule number [A] is implemented at rule number [B]
-	- => [A]              MEANS that the current rule is implemented at rule number [A]
-	- <= [A]              MEANS that the rule number [A] is implemented at that point
-	- [A] =>              MEANS that the rule number [A] is implemented later
-	- ntd                 MEANS "nothing to do" : the rule does not need anything to be implemented
-	- physical descrption MEANS that the rule descirbes the physical game pieces, there is nothing to implement
+	- [A] => [B]           MEANS that the rule number [A] is implemented at rule number [B]
+	- => [A]               MEANS that the current rule is implemented at rule number [A]
+	- <= [A]               MEANS that the rule number [A] is implemented at that point
+	- [A] =>               MEANS that the rule number [A] is implemented later
+	- ntd                  MEANS "nothing to do" : the rule does not need anything to be implemented
+	- physical description MEANS that the rule descirbes the physical game pieces, there is nothing to implement
 
 *)
+
+Section Utils.
+
+	Fixpoint iter {T:Type} (n:nat) (f:T->T) (x:T) := match n with
+		| 0 => x
+		| S n => (iter n f) (f x)
+	end. 
+
+	Lemma iter_commute : forall n {T} (f:T->T) x, f (iter n f x) = iter n f (f x).
+	Proof.
+		induction n; intros; simpl; auto.
+	Qed.
+	
+	
+	Lemma mod_simpl : forall n a b c, (a + c) mod n = (b + c) mod n -> a mod n = b mod n.
+	Admitted. (* TODO *)
+
+
+End Utils.
 
 Section __CARDS.
 
@@ -21,8 +43,163 @@ End __CARDS.
 
 Section __PLAYERS.
 
+	
 	Axiom PLAYER : Type.
-	(* Variant PLAYER := PlayerA | PlayerB . *)
+	Axiom players_number : nat.
+
+	Axiom at_least_2_players : players_number >= 2.
+
+
+
+	(** PLAYER ~= [|1,n|] **)
+
+	Axiom proof_irrelevance_lt_players_number :
+		forall n, forall p q : n < players_number, p = q.
+
+	Axiom player : { n:nat | n < players_number } -> PLAYER.
+	Axiom player_id : PLAYER -> { n:nat | n < players_number }.
+	Definition player_id' := fun p => proj1_sig (player_id p).
+	Axiom player_player_id : forall x, player (player_id x) = x.
+	Axiom player_id_player : forall x, player_id (player x) = x.
+
+	Lemma player_injection : forall n m, player n = player m -> n = m.
+	Proof.
+		intros. rewrite <- player_id_player. rewrite <- player_id_player at 1.
+		rewrite H. auto.
+	Qed.
+
+	Lemma player_bijection : forall p, exists! n, player n = p.
+	Proof.
+		intros. exists (player_id p). split. 
+		- apply player_player_id.
+		- intros. rewrite <- H. apply player_id_player.
+	Qed.
+
+	Lemma player_id_injection : forall p q, player_id p = player_id q -> p = q.
+		intros. rewrite <- player_player_id. rewrite <- player_player_id at 1.
+		rewrite H. auto.
+	Qed.
+
+	Lemma player_id_bijection : forall n, exists! p, player_id p = n.
+	Proof.
+		intros. exists (player n). split.
+		- apply player_id_player.
+		- intros. rewrite <- H. apply player_player_id.
+	Qed. 
+
+	Lemma player_id'_small : forall p, player_id' p < players_number.
+	Proof.
+		intros. unfold player_id'. destruct (player_id p); simpl. auto.
+	Qed.
+
+	Lemma player_id'_injection : forall p q, player_id' p = player_id' q -> p = q.
+	Proof.
+		intros. unfold player_id' in *.
+		assert (player_id p = player_id q).
+		- destruct (player_id p). destruct (player_id q). simpl in *. subst.
+		  assert (l = l0) by apply proof_irrelevance_lt_players_number. subst. auto.
+		- apply player_id_injection. auto.
+	Qed.
+
+
+	(** Definition of next player using the correspondance above **)
+	Program Lemma next_player : PLAYER -> PLAYER.
+	Proof.
+		intro p. destruct (player_id p) as [n]. apply player.
+		exists (modulo (S n) players_number).
+		apply PeanoNat.Nat.mod_upper_bound. lia.
+	Defined.
+
+
+	Lemma next_player_player_id : forall p n, player_id' p = n ->
+		player_id' (next_player p) = (S n) mod players_number.
+	Proof.
+		intros. unfold player_id' in *. 
+		unfold next_player. 
+		destruct (player_id p) as [n' ?]. simpl in *.  
+		rewrite player_id_player. simpl. 
+		auto.
+	Qed.
+
+	Lemma next_player_iter : forall k n p, player_id' p = n ->
+		player_id' ((iter k next_player) p) = (n + k) mod players_number.
+	Proof.
+		induction k; intros; simpl.
+		- rewrite H. replace (n+0) with n by lia. symmetry. apply PeanoNat.Nat.mod_small.
+		  rewrite <- H. apply player_id'_small.
+		- erewrite IHk. 2:apply next_player_player_id; eauto.
+		  simpl. replace (n + S k) with (S n + k) by lia. apply PeanoNat.Nat.Div0.add_mod_idemp_l.
+	Qed.
+
+	Lemma next_player_involution : forall p, (iter players_number next_player) p = p.
+	Proof.
+		intros.
+		apply player_id'_injection. erewrite next_player_iter. 2:eauto.
+		replace players_number with (1*players_number) at 1 by lia.
+		rewrite PeanoNat.Nat.Div0.mod_add. rewrite PeanoNat.Nat.mod_small; auto. apply player_id'_small.
+	Qed.
+
+	Lemma next_player_involution' : forall n, 0 < n -> n < players_number ->
+		forall p, (iter n next_player) p <> p.
+	Proof.
+		intros n Hn0 Hn p H0.
+		assert (player_id' (iter n next_player p) = player_id' p). rewrite H0; auto. 
+		erewrite next_player_iter in H. 2:eauto.
+		unfold player_id' in *. destruct (player_id p) as [x Hx]. simpl in *. clear H0 p.
+		rewrite <- (PeanoNat.Nat.mod_small x players_number) in H at 2; auto.
+		replace x with (0+x) in H at 2 by lia. replace (x+n) with (n+x) in H by lia.
+		apply mod_simpl in H. 
+		rewrite PeanoNat.Nat.Div0.mod_0_l in H. rewrite <- PeanoNat.Nat.Div0.div_exact in H.
+		destruct (n/players_number); lia.
+	Qed.
+
+	Lemma next_player_injection : forall p q, next_player p = next_player q -> p = q.
+	Proof.
+		intros.
+		assert (player_id' (next_player p) = player_id' (next_player q)). rewrite H; auto. clear H.
+		erewrite !next_player_player_id in H0; eauto.
+		apply player_id'_injection.
+		assert (player_id' p < players_number) by apply player_id'_small.
+		assert (player_id' q < players_number) by apply player_id'_small.
+		destruct (Compare_dec.lt_eq_lt_dec (S (player_id' p)) players_number) as [[]|];
+		destruct (Compare_dec.lt_eq_lt_dec (S (player_id' q)) players_number) as [[]|];
+		try rewrite e in *; try rewrite e0 in *; try rewrite PeanoNat.Nat.Div0.mod_same in *; try lia;
+		rewrite !PeanoNat.Nat.mod_small in H0; auto; lia.
+	Qed.
+	
+
+	(* Previous player *)
+	Definition previous_player p := iter (players_number - 1) next_player p.
+
+	Lemma next_previous : forall p, next_player (previous_player p) = p.
+	Proof.
+		intros. unfold previous_player.
+		rewrite <- next_player_involution. 
+		replace (players_number) with (S (players_number -1)) by (pose at_least_2_players; lia).
+		simpl. rewrite iter_commute. replace (players_number - 1 - 0) with (players_number - 1) by lia. auto.
+	Qed.
+
+	Lemma previous_next : forall p, previous_player (next_player p) = p.
+	Proof.
+		intros. unfold previous_player. 
+		rewrite <- next_player_involution. 
+		replace (players_number) with (S (players_number -1)) by (pose at_least_2_players; lia).
+		simpl. replace (players_number - 1 - 0) with (players_number - 1) by lia. auto.
+	Qed.
+
+	Lemma next_player_surjection : forall p, exists q, p = next_player q.
+	Proof.
+		intros.	exists (previous_player p). symmetry. apply next_previous.
+	Qed.
+
+
+	Lemma next_player_bijection : forall p, exists! q, p = next_player q.
+	Proof.
+		intros.	exists (previous_player p). split.
+		- symmetry. apply next_previous.
+		- intros. subst. apply previous_next.
+	Qed.
+
 
 End __PLAYERS.
 
@@ -727,7 +904,7 @@ Section _4_GAME_PROGRESSION.
 		| Effect : EFFECT -> ACTION
 		| Step : STEP -> ACTION
 		| AtomicAction : ATOMIC_ACTION -> ACTION
-		| PlayerAction : PLAYER_ACTION -> ACTION
+		| PlayerAction : PLAYER -> PLAYER_ACTION -> ACTION
 		| CheckReactions
 	.
 	Notation "#{ a }" := (AtomicAction a).
@@ -888,5 +1065,41 @@ Section _4_GAME_PROGRESSION.
 	Axiom _4_2_5_play : ~( #{ play_phase Night } | ).
 	Axiom _4_2_5_end  : ~( #{ end_phase Dusk } |> #{ new_day }).
 
+	Lemma _4_2_daily_effects : forall ph, exists es, daily_effects ph es.
+	Proof.
+		intros. induction ph; eexists.
+		- apply _4_2_1_a.
+		- apply _4_2_2_a.
+		- apply _4_2_3_daily_effects.
+		- apply _4_2_4_a.
+		- apply _4_2_5_a.
+	Qed.
+
+
+	(*****************************)
+	(*** 4.3 - ENDING THE GAME ***)
+	(*****************************)
+
+	(* todo *)
+
+
+
+	(******************************)
+	(*** 4.4 CHECKING REACTIONS ***)
+	(******************************)
+
+	(* 4.4.a *)
+	Lemma _4_4_a : forall ph G s, exists G' s', #{ begin_phase ph } :: s @ G ~> CheckReactions :: s' @ G'.
+	Proof.
+		intros. destruct _4_2_daily_effects with ph as [es Hes]. eexists. eexists.
+		eapply _4_2; eauto.
+	Qed.
+	(* => 4 *)
+	(* ? *)
+
+	(* 4.4.b *)
+	Axiom _4_4_b : forall G s P,
+		P =   -> 
+		G ~( CheckReactions |> PlayerAction (Choose ) )~> G
 
 End _4_GAME_PROGRESSION.

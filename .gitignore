@@ -21,6 +21,7 @@
 *.vo
 *.vok
 *.vos
+.vscode
 .coq-native
 .csdp.cache
 .lia.cache
