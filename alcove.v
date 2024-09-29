@@ -919,13 +919,13 @@ Section _4_GAME_PROGRESSION.
 
 	Axiom perform : GAME_PENDING -> GAME_PENDING -> Prop.
 	Notation "p ~> p'"             := ( perform p p' )                           (at level 90).
-	Notation "G ~( a |  s )~> G'"  := ( (a::s) @ G ~> s @ G' )                   (at level 90).
+	Notation "G ~( a | s )~> G'"   := ( (a::s) @ G ~> s @ G' )                   (at level 90).
 	Notation "G ~( a |>> s )~> G'" := ( forall s', (a::s') @ G ~> (s++s') @ G' ) (at level 90).
 	Notation "G ~( a |> a' )~> G'" := ( G ~( a |>> (a' :: nil) )~> G' )          (at level 90).
 	Notation "G ~( a )~> G'"       := ( forall s, G ~( a | s )~> G' )            (at level 90).
-	Notation "~( a |>> s )"         := ( forall G, G ~( a |>> s )~> G )           (at level 90).
-	Notation "~( a |> a' )"         := ( forall G, G ~( a |> a' )~> G )           (at level 90).
-	Notation "~( a | )"             := ( forall G, G ~( a )~> G )                 (at level 90).
+	Notation "~( a |>> s )"        := ( forall G, G ~( a |>> s )~> G )           (at level 90).
+	Notation "~( a |> a' )"        := ( forall G, G ~( a |> a' )~> G )           (at level 90).
+	Notation "~( a | )"            := ( forall G, G ~( a )~> G )                 (at level 90).
 
 
 	Axiom perform_effect : forall e sq,
@@ -1098,8 +1098,8 @@ Section _4_GAME_PROGRESSION.
 	(* ? *)
 
 	(* 4.4.b *)
-	Axiom _4_4_b : forall G s P,
-		P =   -> 
-		G ~( CheckReactions |> PlayerAction (Choose ) )~> G
+	(* ? *)
+
+	(* => 4.4.a *)
 
 End _4_GAME_PROGRESSION.
