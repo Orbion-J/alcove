@@ -30,3 +30,7 @@ invited to get involved. You can reach me directly or open issues or PRs.
 
 This is an open source project, feel free to use this work in your own project. Please read
 the `LICENCE` file before doing so or fore more information.
+
+## Dependancies
+
+- Coq record update : https://github.com/tchajed/coq-record-update 
