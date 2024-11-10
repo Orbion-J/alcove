@@ -100,6 +100,7 @@ Module LANGUAGE (TYP_PARAM:TYP_PARAM_SIG) (LANGUAGE_PARAM : LANGUAGE_PARAM_SIG T
 
 	Definition ctx := ident -> option Typ.
 	Definition ctx_in x t (G:ctx) := G x = Some t.
+	Definition ctx_in' x (G:ctx) := exists t, G x = Some t.
 	Definition ctx_notin x (G:ctx) := G x = None.
 	Definition ctx_empty : ctx := fun _ => None.
 	Definition ctx_add x t (G:ctx) : ctx := fun y => match string_dec x y with
@@ -156,6 +157,15 @@ Module LANGUAGE (TYP_PARAM:TYP_PARAM_SIG) (LANGUAGE_PARAM : LANGUAGE_PARAM_SIG T
 			+ apply H3 in H4. unfold ctx_in in H4. rewrite <- H4. auto.
 			+ apply H3 in H5. unfold ctx_in in H5. rewrite <- H4. auto.
 	Qed.
+	Lemma ctx_joined_in' : forall G G' H x, ctx_joined G G' H ->
+		(ctx_in' x G \/ ctx_in' x G' <-> ctx_in' x H).
+	Proof.
+		intros; split; intros.
+		- destruct H1 as [ [t] | [t] ]; exists t; apply H0; auto.
+		- destruct H1 as [t]. edestruct H0 as [[]_]. eauto. 
+			+ left. exists t. auto.  
+			+ right. exists t. auto.  
+	Qed.
 
 
 
@@ -181,122 +191,108 @@ Module LANGUAGE (TYP_PARAM:TYP_PARAM_SIG) (LANGUAGE_PARAM : LANGUAGE_PARAM_SIG T
 			ctx_empty |- PCho c ! type_choices c
 	where "G |- a ! t" := (typ G a t).
 
-	(* Lemma ctx_unicity : forall G a t, G |- a ! t -> forall H b u, H |- b ! u -> 
-		a = b -> t=u -> G = H.
-	Proof.
-		intros ? ? ? H0; induction H0; intros ? ? ? H1; induction H1;
-		intros Hterm; inversion Hterm; intro Htyp; inversion Htyp; subst; auto. 
-		- assert (G = G0). 
-		
-		
-		eapply IHtyp1; eauto. 
-			assert (G' = G'0). eapply IHtyp2; eauto. 
-			subst. eapply ctx_joined_fun; eauto.	
-		- assert (ctx_add x0 t0 G = ctx_add x0 t0 G0).
-			eapply IHtyp; eauto. eapply ctx_add_inj; eauto.
-		- assert (G = G0). eapply IHtyp1; eauto. 
-			assert (G' = G'0). eapply IHtyp2; eauto. 
-			subst. eapply ctx_joined_fun; eauto.	
-		- assert (G = G0). eapply IHtyp1; eauto. 
-			assert (G' = G'0). eapply IHtyp2; eauto. 
-			subst. eapply ctx_joined_fun; eauto.
-	Qed. *)
+	Fixpoint appears x a := match a with 
+		| Var y => x = y
+		| App a b => appears x a \/ appears x b
+		| Abs y _ a => not (x = y) /\ appears x a
+		| Seq a b => appears x a \/ appears x b
+		| Req a b => appears x a \/ appears x b
+		| _ => False
+	end.
 
-
-	(* Lemma typ_ctx_unicity : forall G a t, G |- a ! t -> forall H b u, H |- b ! u -> 
-		a = b -> (G = H <-> t=u).
+	Lemma ctx_minimal : forall a G t, G |- a ! t -> forall x, appears x a -> ctx_in' x G.
 	Proof.
+		intros ? ? ? Ht. induction Ht; intros xx HH; inversion HH; subst; auto.
+		all: try (eapply ctx_joined_in'; eauto; fail).
+		- exists t. apply ctx_one_in.
+		- destruct (IHHt xx H1) as [t']. 
+			unfold ctx_add in H2. destruct (string_dec x xx).
+			+ exfalso. apply H0. auto.
+			+ exists t'. auto.
+	Qed. 
+	Lemma ctx_minimal' : forall G a t, G |- a ! t -> forall x, ctx_in' x G -> appears x a.
+	Proof.
+		intros ? ? ? Ht. induction Ht; intros xx HH; inversion HH; subst; auto.
+		-  unfold appears.
+			unfold ctx_one in H. unfold ctx_add in H. destruct (string_dec x xx); auto.
+			unfold ctx_empty in H. inversion H.
+		- unfold appears. destruct HH as [ t']. destruct (H0 xx t') as [[] _]. eauto. 
+			+ left. apply IHHt1. exists t'. auto.
+			+ right. apply IHHt2. exists t'. auto.
+		- unfold appears. 
+			assert (x <> xx).
+			{ intro. subst. unfold ctx_notin in H. rewrite H in H0. inversion H0. }
+			split ; auto. apply IHHt.
+			exists x0. unfold ctx_add. destruct (string_dec x xx).
+			+ exfalso. apply H1. auto.
+			+ auto. 
+		- unfold appears. destruct HH as [ t']. destruct (H0 xx t') as [[] _]. eauto. 
+			+ left. apply IHHt1. exists t'. auto.
+			+ right. apply IHHt2. exists t'. auto. 
+		- unfold appears. destruct HH as [ t']. destruct (H0 xx t') as [[] _]. eauto. 
+			+ left. apply IHHt1. exists t'. auto.
+			+ right. apply IHHt2. exists t'. auto.
+		- unfold ctx_empty in H. inversion H.
+		- unfold ctx_empty in H. inversion H.
+		- unfold ctx_empty in H. inversion H.
+		- unfold ctx_empty in H. inversion H.
+	Qed.	
+
+	Lemma ctx_joined_in'_inj_left : forall G G' G0 G'0 H, ctx_joined G G' H -> ctx_joined G0 G'0 H -> 
+		(forall x, ctx_in' x G <-> ctx_in' x G0) -> G = G0.
+	Proof.
+		intros. extensionality x.
+		set (v := G x). assert (G x = v) by auto.
+		set (w := G0 x). assert (G0 x = w) by auto.
+		destruct v; destruct w; auto.
+		- assert (ctx_in x t H). apply H0. left. apply H3.
+			assert (ctx_in x t0 H). apply H1. left. apply H4.
+			rewrite <- H5. auto.
+		- destruct (H2 x) as [? _]. destruct H5. exists t; auto.
+			rewrite H4 in H5; inversion H5.
+		- destruct (H2 x) as [_ ?]. destruct H5. exists t; auto.
+			rewrite H3 in H5; inversion H5.
+	Qed.
+
+	Lemma ctx_joined_in'_inj_right : forall G G' G0 G'0 H, ctx_joined G G' H -> ctx_joined G0 G'0 H -> 
+		(forall x, ctx_in' x G' <-> ctx_in' x G'0) -> G' = G'0.
+	Proof.
+		intros. extensionality x.
+		set (v := G' x). assert (G' x = v) by auto.
+		set (w := G'0 x). assert (G'0 x = w) by auto.
+		destruct v; destruct w; auto.
+		- assert (ctx_in x t H). apply H0. right. apply H3.
+			assert (ctx_in x t0 H). apply H1. right. apply H4.
+			rewrite <- H5. auto.
+		- destruct (H2 x) as [? _]. destruct H5. exists t; auto.
+			rewrite H4 in H5; inversion H5.
+		- destruct (H2 x) as [_ ?]. destruct H5. exists t; auto.
+			rewrite H3 in H5; inversion H5.
+	Qed.
+			
+
+	Lemma typ_unicity : forall G a t u, G |- a ! t -> G |- a ! u -> t = u.
+	Proof.
+		enough (forall G a t, G |- a ! t -> forall H b u, H |- b ! u -> a = b -> G = H -> t = u)
+		by eauto.
 		intros ? ? ? H0; induction H0; intros ? ? ? H1; induction H1;
-		intros Hterm; inversion Hterm; split; intro; subst; auto.
+		intros Hterm; inversion Hterm; intro; subst; auto.
 		- eapply ctx_in_fun. eapply ctx_one_in. rewrite H. apply ctx_one_in.
 		- enough (Fun t u = Fun t u0).
 			+ inversion H; auto.
 			+ assert (t=t0).
-				* eapply IHtyp2; eauto. admit.
-			  	* admit.
-		- assert (G = G0). {
-			eapply IHtyp1; eauto. enough (t=t0) by (subst; auto).
-			eapply IHtyp2; eauto.
-			assert (G' = G'0). eapply IHtyp2; eauto. 
-			subst. eapply ctx_joined_fun; eauto.
-		- assert (ctx_add x0 t0 G = ctx_add x0 t0 G0).
-			eapply IHtyp; eauto. eapply ctx_add_inj; eauto.
-		- assert (G = G0). eapply IHtyp1; eauto. 
-			assert (G' = G'0). eapply IHtyp2; eauto. 
-			subst. eapply ctx_joined_fun; eauto.
-		- assert (G = G0). eapply IHtyp1; eauto. 
-			assert (G' = G'0). eapply IHtyp2; eauto. 
-			subst. eapply ctx_joined_fun; eauto.
-	Qed. *)
-(* 
-	Definition ctx := set (ident * Typ).
-	Lemma Typ_eq_dec : forall x y:Typ, {x = y} + {x <> y}.
-	Proof.
-		induction x; induction y.
-		all:try (right; intro HH; inversion HH; fail).
-		all:try (left; auto; fail).
-		- destruct (IHx1 y1).
-			destruct (IHx2 y2); subst; auto.
-			all:right; intro HH; inversion HH; auto.
-		- destruct (eq_dec_primitive_types p p0). left; subst; auto. right; intro; inversion H; auto.
+				* eapply IHtyp2; eauto. eapply ctx_joined_in'_inj_right; eauto.
+					intro. split; intro; eapply ctx_minimal; eauto; eapply ctx_minimal'.
+					-- apply H0_0.
+					-- auto.
+					-- apply H1_0.
+					-- auto.
+			  	* subst. eapply IHtyp1; eauto. eapply ctx_joined_in'_inj_left; eauto.
+					intro. split; intro; eapply ctx_minimal; eauto; eapply ctx_minimal'.
+					-- apply H0_.
+					-- auto.
+					-- apply H1_.
+					-- auto.
 	Qed.
-	Lemma ident_eq_dec : forall x y:ident, {x = y} + {x <> y}.
-	Proof. apply string_dec. Qed.
-	Lemma ctx_eq_dec : forall x y:(ident * Typ), {x = y} + {x <> y}.
-	Proof.
-		intros. destruct x; destruct y.
-		destruct (Typ_eq_dec t t0); subst.
-		- destruct (ident_eq_dec i i0); subst.
-			+ auto.
-			+ right. intro. inversion H. auto.
-		- right. intro. inversion H. auto.
-	Qed.
-	Definition set_union := set_union ctx_eq_dec.
-	Definition set_add := set_add ctx_eq_dec.
-	Definition set_mem := set_mem ctx_eq_dec.
-	Definition set_remove := set_remove ctx_eq_dec.
-
-
-	Reserved Notation "G |- l ! t" (at level 80).
-
-	Inductive typ : ctx -> L -> Typ -> Prop :=
-		| typ_var : forall x t, (x,t)::nil |- Var x ! t
-		| typ_app : forall a b t u G H,
-			G |- a ! Fun t u -> H |- b ! t -> (set_union G H) |- App a b ! u
-		| typ_abs : forall G x t a, set_In (x,t) G -> 
-			G |- a ! ModT -> set_remove (x,t) G |- Abs x t a ! ModT
-		| typ_seq : forall G H a b, 
-			G |- a ! ModT -> H |- b ! ModT -> set_union G H |- Seq a b ! ModT
-		| typ_req : forall G H a b,
-			G |- a ! ActT -> H |- b ! ChoT -> set_union G H |- Req a b ! ReqT 
-		| typ_val : forall v,
-			nil |- Val v ! type_values v
-		| typ_mod : forall m,
-			nil |- PMod m ! type_modifiers m
-		| typ_act : forall a,
-			nil |- PAct a ! type_actors a
-		| typ_cho : forall c,
-			nil |- PCho c ! type_choices c
-	where "G |- a ! t" := (typ G a t).
-
-	Lemma typ_unicity : forall G a t u, G |- a ! t -> G |- a ! u -> t=u.
-	Proof.
-		enough (forall G a t, G |- a ! t -> forall H b u, H |- b ! u -> a = b -> G = H -> t=u) by eauto. 
-		intros ? ? ? H0; induction H0; intros ? ? ? H1; induction H1; intros Hterm Hctx.
-		all: inversion Hterm; inversion Hctx; subst; auto.
-		assert (t = t0).
-		{ eapply IHtyp2; eauto. }
-		assert (Fun t u = Fun t u0). 
-		- eapply IHtyp1. eauto.
-		- inversion H1.
-		eauto.
-
-	Lemma ctx_unicity : forall G H a t, G |- a ! t -> H |- a ! t -> G = H.
-	Proof.
-		enough (forall G a t, G |- a ! t -> forall H b u, H |- b ! u -> a = b -> t = u -> G = H) by eauto. 
-		intros ? ? ? H0; induction H0; intros ? ? ? H1; induction H1; intros Hterm Htyp.
-		all: inversion Hterm; inversion Htyp; subst; auto.
-		eauto.
-		 *)
 
 End LANGUAGE.
